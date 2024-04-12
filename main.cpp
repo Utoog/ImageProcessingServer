@@ -5,7 +5,7 @@
 
 //  yoinked from: https://github.com/ultralytics/ultralytics/tree/main/examples/YOLOv8-CPP-Inference
 
-void startInf(Inference &model, std::string &image)
+void StartInference(Inference &model, std::string &image)
 {
     cv::Mat frame = cv::imread(image);
 
@@ -43,22 +43,31 @@ void startInf(Inference &model, std::string &image)
     cv::waitKey(-1);
 }
 
-
-int main(int argc, char** argv)
+void RunTests(Inference &inf)
 {
-    bool runOnGPU = false;
-    Inference inf("yolov8s.onnx", cv::Size(640, 480), "classes.txt", runOnGPU);
-
     std::vector<std::string> imageNames;
-    imageNames.push_back("images/image1.jpg");
-    imageNames.push_back("images/image2.jpg");
-    imageNames.push_back("images/image3.jpg");
-    imageNames.push_back("images/image4.jpg");
+    imageNames.push_back("../images/image1.jpg");
+    imageNames.push_back("../images/image2.jpg");
+    imageNames.push_back("../images/image3.jpg");
+    imageNames.push_back("../images/image4.jpg");
 
     for (int i = 0; i < imageNames.size(); i++)
     {
-        startInf(inf, imageNames[i]);
+        StartInference(inf, imageNames[i]);
     }
+}
+
+
+int main(int argc, char** argv)
+{
+    std::string ObjectDetectionModel = "yolov8s.onnx";
+    cv::Size ModelInputShape(640, 480);
+    std::string ClassesFile = "classes.txt";
+    bool RunOnGPU = false;
+
+    Inference InferenceModel(ObjectDetectionModel, ModelInputShape, "", RunOnGPU);
+
+    RunTests(InferenceModel);
 
     return 0;
 }
