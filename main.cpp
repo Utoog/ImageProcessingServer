@@ -1,9 +1,28 @@
 #include <iostream>
 #include <vector>
+#include <ctime>
 #include <opencv2/opencv.hpp>
+#include <cstring>
 #include "inference.h"
 
-//  yoinked from: https://github.com/ultralytics/ultralytics/tree/main/examples/YOLOv8-CPP-Inference
+const std::string MODEL_PATH = "../yolov8s.onnx";
+const std::string RESULT_PATH = "../results/";
+const std::string TEST_IMAGES_PATH = "../images/";
+
+std::string GetFormattedTime()
+{
+    const size_t buff_size = 20;
+    char buffer[buff_size];
+    char* formatstring  = "%F_%H-%M-%S";
+    int wrchar;
+    time_t now;
+    struct tm* timeinfo;
+    now = time(NULL);
+    timeinfo = localtime(&now);
+    wrchar = strftime(buffer, buff_size, formatstring, timeinfo);
+    std::string time_string = buffer;
+    return time_string;
+}
 
 void StartInference(Inference &model, std::string &image)
 {
@@ -38,18 +57,18 @@ void StartInference(Inference &model, std::string &image)
     // This is only for preview purposes
     float scale = 0.8;
     cv::resize(frame, frame, cv::Size(frame.cols * scale, frame.rows * scale));
-    cv::imshow("Inference", frame);
-
-    cv::waitKey(-1);
+    std::string imgpath = RESULT_PATH + GetFormattedTime() + ".jpg";
+    cv::imwrite(imgpath, frame);
 }
 
 void RunTests(Inference &inf)
 {
     std::vector<std::string> imageNames;
-    imageNames.push_back("../images/image1.jpg");
-    imageNames.push_back("../images/image2.jpg");
-    imageNames.push_back("../images/image3.jpg");
-    imageNames.push_back("../images/image4.jpg");
+    int image_sum = 4;
+    for (int i = 1; i <= image_sum; i++)
+    {
+        imageNames.push_back(TEST_IMAGES_PATH + "image" + (char)(i+48) + ".jpg");
+    }
 
     for (int i = 0; i < imageNames.size(); i++)
     {
@@ -60,7 +79,7 @@ void RunTests(Inference &inf)
 
 int main(int argc, char** argv)
 {
-    std::string ObjectDetectionModel = "yolov8s.onnx";
+    std::string ObjectDetectionModel = MODEL_PATH;
     cv::Size ModelInputShape(640, 480);
     std::string ClassesFile = "classes.txt";
     bool RunOnGPU = false;

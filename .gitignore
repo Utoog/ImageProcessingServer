@@ -22,3 +22,9 @@ _deps
 
 # Misc
 *.dll
+
+# results path
+results
+results/*
+
+# might add images folder also
