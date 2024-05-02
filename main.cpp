@@ -4,17 +4,20 @@
 #include <cstring>
 #include <filesystem>
 #include <sstream>
+
 #include <opencv2/opencv.hpp>
 #include "inference.h"
 
-#define IMAGE_FILE_TIME_FORMAT "%F_%H-%M-%S"
-#define CLASSES_FILE "classes.txt"
-#define RUN_ON_GPU false
+#define IMAGE_FILE_TIME_FORMAT       "%F_%H-%M-%S"
+#define CLASSES_FILE                 "classes.txt"
+#define RUN_ON_GPU                   false
+#define MODEL_INPUT_SHAPE            640, 480
+#define MODEL_FILENAME               "yolov8s.onnx"
 
-const std::filesystem::path PROJECT_DIR = "../";
-const std::filesystem::path MODEL_PATH = PROJECT_DIR / "yolov8s.onnx";
-const std::filesystem::path RESULT_PATH = PROJECT_DIR / "results/";
-const std::filesystem::path TEST_IMAGES_PATH = PROJECT_DIR / "images/";
+const std::filesystem::path PROJECT_DIR =       "../";
+const std::filesystem::path MODEL_PATH =        PROJECT_DIR / MODEL_FILENAME;
+const std::filesystem::path RESULT_PATH =       PROJECT_DIR / "results/";
+const std::filesystem::path TEST_IMAGES_PATH =  PROJECT_DIR / "images/";
 
 
 std::string GetFormattedTime()
@@ -32,7 +35,7 @@ std::string GetFormattedTime()
     return time_string;
 }
 
-void DetectObjects(Inference &model, std::filesystem::path &image)
+void DetectObjects(Inference &model, const std::filesystem::path &image)
 {
     cv::Mat frame = cv::imread(image.string());
 
@@ -65,19 +68,9 @@ void DetectObjects(Inference &model, std::filesystem::path &image)
 
 void RunTests(Inference &inf)
 {
-    std::vector<std::filesystem::path> imageNames;
-    int image_sum = 4;
-    for (char i = 1; i <= image_sum; i++)
+    for (const std::filesystem::directory_entry & image : std::filesystem::directory_iterator(TEST_IMAGES_PATH))
     {
-        std::string imagename = "image";
-        imagename += (i + 48);
-        imagename += ".jpg";
-        imageNames.push_back(TEST_IMAGES_PATH / imagename);
-    }
-
-    for (int i = 0; i < imageNames.size(); i++)
-    {
-        DetectObjects(inf, imageNames[i]);
+        DetectObjects(inf, image.path());
     }
 }
 
@@ -85,7 +78,7 @@ void RunTests(Inference &inf)
 int main(int argc, char** argv)
 {
     std::filesystem::path ObjectDetectionModel = MODEL_PATH;
-    cv::Size ModelInputShape(640, 480);
+    cv::Size ModelInputShape{MODEL_INPUT_SHAPE};
     std::filesystem::path ClassesFile = PROJECT_DIR / CLASSES_FILE;
     bool RunOnGPU = RUN_ON_GPU;
 
