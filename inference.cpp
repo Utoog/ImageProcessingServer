@@ -11,6 +11,11 @@ Inference::Inference(const std::string &onnxModelPath, const cv::Size &modelInpu
     loadClassesFromFile();
 }
 
+Inference::Inference()
+{
+    return;
+}
+
 std::vector<Detection> Inference::runInference(const cv::Mat &input)
 {
     cv::Mat modelInput = input;
