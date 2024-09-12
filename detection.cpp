@@ -76,6 +76,10 @@ std::vector<std::string> ImageProcess::DetectObjects(const std::filesystem::path
     
     if (SaveImages)     // Save if needed
     {
+        if (!std::filesystem::exists(ResultPath))
+        {
+            std::filesystem::create_directory(ResultPath);
+        }
         int Duplicates = 1;
         std::string Filename = GetFormattedTime();
         while (std::filesystem::exists(ResultPath / (Filename + ".jpg")))
