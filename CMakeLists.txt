@@ -10,6 +10,8 @@ set(PROJECT_SOURCES
     main.cpp 
     inference.h
     inference.cpp 
+    detection.h
+    detection.cpp
 )
 
 add_executable(ImageProcessingServer ${PROJECT_SOURCES})

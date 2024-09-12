@@ -10,25 +10,28 @@
 
 ImageProcess::ImageProcess()
 {
+    //  Initialize
     ProjectDir = "../";
     ModelPath = ProjectDir / MODEL_FILENAME;
     ResultPath = ProjectDir / "results/";
     TestImagesPath = ProjectDir / "images/";
     FormatString = IMAGE_FILE_TIME_FORMAT;
+    SaveImages = SAVE_IMAGES;
     
+    //  set inference model args
     std::filesystem::path ObjectDetectionModel = ModelPath;
     cv::Size ModelInputShape{ MODEL_INPUT_SHAPE };
     std::filesystem::path ClassesFile = ProjectDir / CLASSES_FILE;
     bool RunOnGPU = RUN_ON_GPU;
 
+    //  Init inference model
     InferenceModel = Inference(ObjectDetectionModel.string(), ModelInputShape, ClassesFile.string(), RunOnGPU);
 
 }
 
-std::string ImageProcess::GetFormattedTime(std::string FormatString)
+std::string ImageProcess::GetFormattedTime()
 {
     std::ostringstream oss;
-    //std::string FormatString = IMAGE_FILE_TIME_FORMAT;
     std::string time_string;
 
     auto time = std::time(nullptr);
@@ -40,16 +43,17 @@ std::string ImageProcess::GetFormattedTime(std::string FormatString)
     return time_string;
 }
 
-std::vector<std::string> ImageProcess::DetectObjects(Inference& model, const std::filesystem::path& image, bool SaveImages)
+std::vector<std::string> ImageProcess::DetectObjects(const std::filesystem::path& image)
 {
     cv::Mat frame = cv::imread(image.string());
 
-    std::vector<Detection> output = model.runInference(frame);
+    std::vector<Detection> output = InferenceModel.runInference(frame);
     std::vector<std::string> DetectionList;
 
     int detections = output.size();
     std::cout << "Number of detections:" << detections << std::endl;
 
+    //  Object detection and outliner
     for (int i = 0; i < detections; ++i)
     {
         Detection detection = output[i];
@@ -69,12 +73,24 @@ std::vector<std::string> ImageProcess::DetectObjects(Inference& model, const std
 
     float scale = 0.8;
     cv::resize(frame, frame, cv::Size(frame.cols * scale, frame.rows * scale));
-    if (SaveImages)
+    
+    if (SaveImages)     // Save if needed
     {
-        std::filesystem::path imgpath = ResultPath / (GetFormattedTime(FormatString) + ".jpg");
+        int Duplicates = 1;
+        std::string Filename = GetFormattedTime();
+        while (std::filesystem::exists(ResultPath / (Filename + ".jpg")))
+        {
+            Filename = GetFormattedTime() + "_" + std::to_string(Duplicates++);
+        }
+        std::filesystem::path imgpath = ResultPath / (Filename + ".jpg");
         cv::imwrite(imgpath.string(), frame);
     }
     return DetectionList;
+}
+
+void AnalyzeList(std::vector<std::string> detectionlist)
+{
+    return;
 }
 
 void ImageProcess::RunTests(void)
@@ -82,6 +98,11 @@ void ImageProcess::RunTests(void)
     std::vector<std::string> DetectionList;
     for (const std::filesystem::directory_entry& image : std::filesystem::directory_iterator(TestImagesPath))
     {
-        DetectionList = DetectObjects(InferenceModel, image.path(), SAVE_IMAGES);
+        DetectionList = DetectObjects(image.path());
+        for(int i = 0; i < DetectionList.size(); i++)
+        {
+            std::cout << DetectionList[i] << std::endl;
+        }
     }
+    
 }
