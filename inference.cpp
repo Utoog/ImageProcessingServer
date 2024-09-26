@@ -156,7 +156,7 @@ void Inference::loadClassesFromFile()
     if (inputFile.is_open())
     {
         std::string classLine;
-        while (std::getline(inputFile, classLine))
+        while (std::getline(inputFile, classLine, '\n'))
             classes.push_back(classLine);
         inputFile.close();
     }

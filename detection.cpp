@@ -3,10 +3,11 @@
 
 #define IMAGE_FILE_TIME_FORMAT  "%F_%H-%M-%S"
 #define CLASSES_FILE            "classes.txt"
+#define HAZARDS_FILE            "hazards.txt"
 #define RUN_ON_GPU              false
 #define MODEL_INPUT_SHAPE       640, 480
 #define MODEL_FILENAME          "yolov8s.onnx"
-#define SAVE_IMAGES             true
+#define SAVE_IMAGES             false
 
 ImageProcess::ImageProcess()
 {
@@ -22,26 +23,17 @@ ImageProcess::ImageProcess()
     std::filesystem::path ObjectDetectionModel = ModelPath;
     cv::Size ModelInputShape{ MODEL_INPUT_SHAPE };
     std::filesystem::path ClassesFile = ProjectDir / CLASSES_FILE;
+    HazardsPath = ProjectDir / HAZARDS_FILE;
     bool RunOnGPU = RUN_ON_GPU;
 
     //  Init inference model
     InferenceModel = Inference(ObjectDetectionModel.string(), ModelInputShape, ClassesFile.string(), RunOnGPU);
 
+    //  Initialize hazards
+    if(!std::filesystem::exists(ProjectDir / HAZARDS_FILE)) std::cout << "Hazard list does not exist, no hazard can be found." << std::endl;
+    LoadHazardsFromFile();
 }
 
-std::string ImageProcess::GetFormattedTime()
-{
-    std::ostringstream oss;
-    std::string time_string;
-
-    auto time = std::time(nullptr);
-    auto time_local = *std::localtime(&time);
-
-    oss << std::put_time(&time_local, FormatString.c_str());
-
-    time_string = oss.str();
-    return time_string;
-}
 
 std::vector<std::string> ImageProcess::DetectObjects(const std::filesystem::path& image)
 {
@@ -92,21 +84,68 @@ std::vector<std::string> ImageProcess::DetectObjects(const std::filesystem::path
     return DetectionList;
 }
 
-void AnalyzeList(std::vector<std::string> detectionlist)
-{
-    return;
-}
-
 void ImageProcess::RunTests(void)
 {
     std::vector<std::string> DetectionList;
     for (const std::filesystem::directory_entry& image : std::filesystem::directory_iterator(TestImagesPath))
     {
         DetectionList = DetectObjects(image.path());
-        for(int i = 0; i < DetectionList.size(); i++)
-        {
-            std::cout << DetectionList[i] << std::endl;
-        }
+
+        CheckForHazards(DetectionList);
     }
-    
+}
+
+void ImageProcess::CheckForHazards(std::vector<std::string> &DetectionList)
+{
+    if (Hazards.size() == 0)
+    {
+        std::cout << "Empty hazard list, hazards can not be found." << std::endl;
+        return;
+    }
+    for (int i = 0; i < DetectionList.size(); i++)
+    {
+        std::vector<std::string> DetectedHazards;
+        for (int j = 0; j < Hazards.size(); j++)
+        {
+            //std::cerr << DetectionList[i] << " " << Hazards[j] << std::endl;
+            if (DetectionList[i].compare(Hazards[j]) == 0)
+            {
+                DetectedHazards.push_back(Hazards[j]);
+                break;
+            }
+        }
+        if (DetectedHazards.size() != 0) SendAlert(DetectedHazards);
+    }
+}
+
+void ImageProcess::SendAlert(std::vector<std::string> Hazards)
+{
+    for (int i = 0; i < Hazards.size(); i++) std::cout << "Hazard: " << Hazards[i] << " detected!" << std::endl;
+    //  add an external alarm system handler here
+}
+
+void ImageProcess::LoadHazardsFromFile()
+{
+    std::ifstream inputFile(HazardsPath);
+    if (inputFile.is_open())
+    {
+        std::string HazardLine;
+        while (std::getline(inputFile, HazardLine, '\n'))
+            Hazards.push_back(HazardLine);
+        inputFile.close();
+    }
+}
+
+std::string ImageProcess::GetFormattedTime()
+{
+    std::ostringstream oss;
+    std::string time_string;
+
+    time_t time = std::time(nullptr);
+    tm time_local = *std::localtime(&time);
+
+    oss << std::put_time(&time_local, FormatString.c_str());
+
+    time_string = oss.str();
+    return time_string;
 }
