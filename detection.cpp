@@ -12,18 +12,18 @@
 ImageProcess::ImageProcess()
 {
     //  Initialize
-    ProjectDir = "../";
-    ModelPath = ProjectDir / MODEL_FILENAME;
-    ResultPath = ProjectDir / "results/";
-    TestImagesPath = ProjectDir / "images/";
-    FormatString = IMAGE_FILE_TIME_FORMAT;
-    SaveImages = SAVE_IMAGES;
+    ProjectDir      = "../";
+    ModelPath       = ProjectDir / MODEL_FILENAME;
+    ResultPath      = ProjectDir / "results/";
+    TestImagesPath  = ProjectDir / "images/";
+    FormatString    = IMAGE_FILE_TIME_FORMAT;
+    SaveImages      = SAVE_IMAGES;
+    HazardsPath     = ProjectDir / HAZARDS_FILE;
+    std::filesystem::path ClassesFile = ProjectDir / CLASSES_FILE;
     
     //  set inference model args
     std::filesystem::path ObjectDetectionModel = ModelPath;
     cv::Size ModelInputShape{ MODEL_INPUT_SHAPE };
-    std::filesystem::path ClassesFile = ProjectDir / CLASSES_FILE;
-    HazardsPath = ProjectDir / HAZARDS_FILE;
     bool RunOnGPU = RUN_ON_GPU;
 
     //  Init inference model
@@ -149,3 +149,4 @@ std::string ImageProcess::GetFormattedTime()
     time_string = oss.str();
     return time_string;
 }
+     
