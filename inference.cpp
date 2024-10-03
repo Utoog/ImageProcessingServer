@@ -19,8 +19,7 @@ Inference::Inference()
 std::vector<Detection> Inference::runInference(const cv::Mat &input)
 {
     cv::Mat modelInput = input;
-    if (letterBoxForSquare && modelShape.width == modelShape.height)
-        modelInput = formatToSquare(modelInput);
+    if (letterBoxForSquare && modelShape.width == modelShape.height) modelInput = formatToSquare(modelInput);
 
     cv::Mat blob;
     cv::dnn::blobFromImage(modelInput, blob, 1.0/255.0, modelShape, cv::Scalar(), true, false);
@@ -29,21 +28,11 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
 
-    int rows = outputs[0].size[1];
-    int dimensions = outputs[0].size[2];
+    int rows = outputs[0].size[2];
+    int dimensions = outputs[0].size[1];
 
-    bool yolov8 = false;
-    // yolov5 has an output of shape (batchSize, 25200, 85) (Num classes + box[x,y,w,h] + confidence[c])
-    // yolov8 has an output of shape (batchSize, 84,  8400) (Num classes + box[x,y,w,h])
-    if (dimensions > rows) // Check if the shape[2] is more than shape[1] (yolov8)
-    {
-        yolov8 = true;
-        rows = outputs[0].size[2];
-        dimensions = outputs[0].size[1];
-
-        outputs[0] = outputs[0].reshape(1, dimensions);
-        cv::transpose(outputs[0], outputs[0]);
-    }
+    outputs[0] = outputs[0].reshape(1, dimensions);
+    cv::transpose(outputs[0], outputs[0]);
     float *data = (float *)outputs[0].data;
 
     float x_factor = modelInput.cols / modelShape.width;
@@ -55,70 +44,31 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
 
     for (int i = 0; i < rows; ++i)
     {
-        if (yolov8)
+        float *classes_scores = data+4;
+
+        cv::Mat scores(1, classes.size(), CV_32FC1, classes_scores);
+        cv::Point class_id;
+        double maxClassScore;
+
+        minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
+        if (maxClassScore > modelScoreThreshold)
         {
-            float *classes_scores = data+4;
+            confidences.push_back(maxClassScore);
+            class_ids.push_back(class_id.x);
 
-            cv::Mat scores(1, classes.size(), CV_32FC1, classes_scores);
-            cv::Point class_id;
-            double maxClassScore;
+            float x = data[0];
+            float y = data[1];
+            float w = data[2];
+            float h = data[3];
 
-            minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
+            int left = int((x - 0.5 * w) * x_factor);
+            int top = int((y - 0.5 * h) * y_factor);
 
-            if (maxClassScore > modelScoreThreshold)
-            {
-                confidences.push_back(maxClassScore);
-                class_ids.push_back(class_id.x);
+            int width = int(w * x_factor);
+            int height = int(h * y_factor);
 
-                float x = data[0];
-                float y = data[1];
-                float w = data[2];
-                float h = data[3];
-
-                int left = int((x - 0.5 * w) * x_factor);
-                int top = int((y - 0.5 * h) * y_factor);
-
-                int width = int(w * x_factor);
-                int height = int(h * y_factor);
-
-                boxes.push_back(cv::Rect(left, top, width, height));
-            }
+            boxes.push_back(cv::Rect(left, top, width, height));
         }
-        else // yolov5
-        {
-            float confidence = data[4];
-
-            if (confidence >= modelConfidenceThreshold)
-            {
-                float *classes_scores = data+5;
-
-                cv::Mat scores(1, classes.size(), CV_32FC1, classes_scores);
-                cv::Point class_id;
-                double max_class_score;
-
-                minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
-
-                if (max_class_score > modelScoreThreshold)
-                {
-                    confidences.push_back(confidence);
-                    class_ids.push_back(class_id.x);
-
-                    float x = data[0];
-                    float y = data[1];
-                    float w = data[2];
-                    float h = data[3];
-
-                    int left = int((x - 0.5 * w) * x_factor);
-                    int top = int((y - 0.5 * h) * y_factor);
-
-                    int width = int(w * x_factor);
-                    int height = int(h * y_factor);
-
-                    boxes.push_back(cv::Rect(left, top, width, height));
-                }
-            }
-        }
-
         data += dimensions;
     }
 
@@ -169,13 +119,11 @@ void Inference::loadOnnxNetwork()
     cv::dnn::Target prefferedTarget;
     if (cudaEnabled)
     {
-        std::cout << "\nRunning on CUDA" << std::endl;
         prefferedBackend = cv::dnn::DNN_BACKEND_CUDA;
         prefferedTarget = cv::dnn::DNN_TARGET_CUDA;
     }
     else
     {
-        std::cout << "\nRunning on CPU" << std::endl;
         prefferedBackend = cv::dnn::DNN_BACKEND_OPENCV;
         prefferedTarget = cv::dnn::DNN_TARGET_CPU;
     }

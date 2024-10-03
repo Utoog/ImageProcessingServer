@@ -12,7 +12,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 
-#define CONFIDENCE_THRESHOLD    0.25
 #define SCORE_THRESHOLD         0.45
 #define NMS_THRESHOLD           0.50
 #define LETTER_BOX_FOR_SQUARE   true
@@ -51,7 +50,6 @@ private:
 
     cv::Size2f modelShape{};
 
-    float modelConfidenceThreshold { CONFIDENCE_THRESHOLD };
     float modelScoreThreshold      { SCORE_THRESHOLD };
     float modelNMSThreshold        { NMS_THRESHOLD };
 
